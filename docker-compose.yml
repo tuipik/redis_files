@@ -1,0 +1,23 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: redis_file_path
+    ports:
+      - "6388:6379"
+    networks:
+      - redis-network
+
+  file-path-checker:
+    build: .
+    container_name: file_path_checker
+    volumes:
+      - /<tile_path>:/data
+    command: ["python", "main.py", "/data", "--redis-host=redis", "--redis-port=6379"]
+    depends_on:
+      - redis
+    networks:
+      - redis-network
+
+networks:
+  redis-network:
+    driver: bridge
