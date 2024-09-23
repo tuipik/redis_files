@@ -2,21 +2,36 @@ services:
   redis:
     image: redis:latest
     container_name: redis_file_path
+    restart: unless-stopped 
     ports:
       - "6388:6379"
+    volumes:
+      - redis-data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     networks:
       - redis-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 50
 
   file-path-checker:
     build: .
     container_name: file_path_checker
+    restart: unless-stopped
     volumes:
-      - /<tile_path>:/data
+      - ${DATA_DIRECTORY}:/data
     command: ["python", "main.py", "/data", "--redis-host=redis", "--redis-port=6379"]
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - redis-network
+
+volumes:
+  redis-data:
 
 networks:
   redis-network:

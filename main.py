@@ -1,30 +1,44 @@
 import os
 import sys
+import time
 
 import redis
 import asyncio
+import logging
 
+logging.basicConfig(level=logging.INFO)
 
-async def get_files(folder, redis_client):
+async def _get_files(folder, redis_client):
     for root, dirs, files in os.walk(folder):
         for file in files:
             file_path = os.path.join(root, file)
             redis_client.sadd('file_paths', file_path)
-            sys.stdout.write(f"added {file_path}")
+            logging.info(f"Fadded {file_path} {time.time()}\n")
+            sys.stdout.write(f"added {file_path} {time.time()}\n")
             yield file_path
 
 
-async def check_files(folder, redis_client):
+async def _check_files(folder, redis_client):
+    logging.info(f"AAAAAAAAAAAAAAAAAAAAAAA.")
     while True:
-        async for file_path in get_files(folder, redis_client):
-            if not redis_client.sismember('file_paths', file_path):
-                redis_client.sadd('file_paths', file_path)
-        await asyncio.sleep(1800)  # 30 minutes
+        file_paths_in_redis = redis_client.smembers('file_paths')
+        logging.info(f"Found {len(file_paths_in_redis)} file paths in Redis.")
+        for file_path in file_paths_in_redis:
+            if not os.path.exists(file_path):
+                redis_client.srem('file_paths', file_path)
+                sys.stdout.write(f"deleted {file_path}\n")
+        await asyncio.sleep(18)
 
 
-async def main(folder, redis_host, redis_port):
+async def check_files(folder, redis_host, redis_port):
     redis_client = redis.StrictRedis(host=redis_host, port=redis_port, decode_responses=True)
-    await check_files(folder, redis_client)
+    await _check_files(folder, redis_client)
+
+
+async def get_files(folder, redis_host, redis_port):
+    redis_client = redis.StrictRedis(host=redis_host, port=redis_port, decode_responses=True)
+    _get_files(folder, redis_client)
+
 
 if __name__ == "__main__":
     import argparse
@@ -36,4 +50,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    asyncio.run(main(args.folder, args.redis_host, args.redis_port))
+    asyncio.run(check_files(args.folder, args.redis_host, args.redis_port))
