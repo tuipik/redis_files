@@ -20,7 +20,6 @@ services:
   file-path-checker:
     build: .
     container_name: file_path_checker
-    restart: unless-stopped
     volumes:
       - ${DATA_DIRECTORY}:/data
     command: ["python", "main.py", "/data", "--redis-host=redis", "--redis-port=6379"]
