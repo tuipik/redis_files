@@ -9,11 +9,22 @@ logging.basicConfig(level=logging.INFO)
 
 
 async def push_paths_to_redis(folder, redis_client):
+    chunk_size = 1000
+    chunks = set()
+    counter = 0
     for root, dirs, files in os.walk(folder):
         for file in files:
             file_path = os.path.join(root, file)
-            await redis_client.sadd("file_paths", file_path)
-            logging.info(f"Added {file_path}")
+            chunks.add(file_path)
+            if len(chunks) == chunk_size:
+                await redis_client.sadd("file_paths", *chunks)
+                chunks.clear()
+                counter += chunk_size
+    if chunks:
+        await redis_client.sadd("file_paths", *chunks)
+        counter += len(chunks)
+        chunks.clear()
+    logging.info(f"Added {counter} paths to redis")
 
 
 def get_all_directories(folder):
@@ -67,15 +78,15 @@ if __name__ == "__main__":
     parser.add_argument("--redis-port", type=int, default=6388, help="Redis port")
 
     args = parser.parse_args()
-    init_file = os.path.join(args.folder, "init_file.txt") 
+    init_file = os.path.join(args.folder, "init_file.txt")
     if not os.path.exists(init_file):
         start_time = datetime.now()
-        directories = get_all_directories(args.folder)
+        all_directories = get_all_directories(args.folder)
 
-        asyncio.run(main(directories, args.redis_host, args.redis_port))
+        asyncio.run(main(all_directories, args.redis_host, args.redis_port))
 
         logging.info(f"Remain time: {datetime.now() - start_time}")
         with open(init_file, "w") as f:
             f.write("Delete me if you want to add all file paths from dir to redis.")
     else:
-        logging.info("File paths already added")
+        logging.info(f"File paths already added. Delete '{init_file}' if you want to add all file paths from dir to redis.")
