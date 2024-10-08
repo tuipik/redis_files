@@ -43,11 +43,11 @@ if __name__ == "__main__":
         start_time = datetime.now()
 
         r = redis.Redis(host=args.redis_host, port=args.redis_port, db=0)
-        if r.ping():
-            scan_and_store_paths(args.folder)
+        print(r.ping())
+        scan_and_store_paths(args.folder)
 
-            logging.info(f"Completed in: {datetime.now() - start_time}")
-            with open(init_file, "w") as f:
-                f.write("Delete me if you want to add all file paths from dir to redis.")
+        logging.info(f"Completed in: {datetime.now() - start_time}")
+        with open(init_file, "w") as f:
+            f.write("Delete me if you want to add all file paths from dir to redis.")
     else:
         logging.info(f"File paths already added. Delete '{init_file}' if you want to add all file paths from dir to redis.")
