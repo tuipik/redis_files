@@ -22,7 +22,7 @@ services:
     container_name: file_path_checker
     volumes:
       - ${DATA_DIRECTORY}:/data
-    command: ["python", "main.py", "/data", "--redis-host=redis", "--redis-port=6379"]
+    command: ["python", "main.py", "/data", "--redis_host=redis", "--redis_port=6379"]
     depends_on:
       redis:
         condition: service_healthy
